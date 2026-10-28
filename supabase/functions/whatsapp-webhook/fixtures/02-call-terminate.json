@@ -1,0 +1,49 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "27115550142",
+              "phone_number_id": "106540352242922"
+            },
+            "contacts": [
+              {
+                "profile": {
+                  "name": "Ntokozo Dlamini",
+                  "username": "ntokozo.d"
+                },
+                "wa_id": "27821234567",
+                "user_id": "BSUID_NTOKOZO_0001",
+                "parent_user_id": "PARENT_BSUID_NTOKOZO_0001"
+              }
+            ],
+            "calls": [
+              {
+                "id": "wacid.HBgLMjc4MjEyMzQ1NjcVAgASGCA5QkE3RjkxMEQwQzlDNEE1RjM4RDJCMUM3RUYyQTRCNQA=",
+                "to": "27115550142",
+                "to_user_id": "BSUID_LUMIQ_0001",
+                "to_parent_user_id": "PARENT_BSUID_LUMIQ_0001",
+                "from": "27821234567",
+                "from_user_id": "BSUID_NTOKOZO_0001",
+                "from_parent_user_id": "PARENT_BSUID_NTOKOZO_0001",
+                "event": "terminate",
+                "direction": "USER_INITIATED",
+                "timestamp": "1757671422",
+                "status": "COMPLETED",
+                "start_time": "1757671202",
+                "end_time": "1757671422",
+                "duration": 220
+              }
+            ]
+          },
+          "field": "calls"
+        }
+      ]
+    }
+  ]
+}

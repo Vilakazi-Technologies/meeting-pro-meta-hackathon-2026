@@ -1,0 +1,32 @@
+{
+  "contract": "docs/DESIGN_CONTRACT.md",
+  "targetViewports": ["390x844", "1440x900"],
+  "accessibility": {
+    "status": "pass",
+    "evidence": "GlassInput labels, sign-in testIDs, password toggle a11yLabel, min 48px touch targets on primary CTA and tab bar."
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "WebAppFrame max width on desktop; ContentColumn max widths; tab bar centered with maxTabBarWidth."
+  },
+  "contentStates": {
+    "loading": { "status": "pass", "evidence": "LoadingScreen + hook loading flags on Home, Contacts, Calls." },
+    "empty": { "status": "pass", "evidence": "ContactsScreen and list empty states with add/nav actions." },
+    "error": { "status": "pass", "evidence": "SignInScreen error text; data hooks surface API messages." },
+    "partial": { "status": "not-applicable", "reason": "Transcript partial delivery handled as processing/failed statuses in Calls tab." },
+    "success": { "status": "pass", "evidence": "Transcript detail and settings email save feedback." },
+    "permission": { "status": "pass", "evidence": "Clerk sign-in wall; Business API limitation copy on Contacts." }
+  },
+  "renderedEvidence": [
+    {
+      "viewport": "390x844",
+      "artifact": "pending-post-deploy-sign-in-mobile.png",
+      "observation": "Capture after production deploy: sign-in glass column, VILATECH footer, Clerk fields."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "pending-post-deploy-home-desktop.png",
+      "observation": "Capture after production deploy: framed web shell, Home stats and recent list."
+    }
+  ]
+}

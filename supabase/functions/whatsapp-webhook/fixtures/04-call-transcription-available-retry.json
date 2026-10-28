@@ -1,0 +1,38 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "27115550142",
+              "phone_number_id": "106540352242922"
+            },
+            "calls": [
+              {
+                "id": "wacid.HBgLMjc4MjEyMzQ1NjcVAgASGCA5QkE3RjkxMEQwQzlDNEE1RjM4RDJCMUM3RUYyQTRCNQA=",
+                "from": "27821234567",
+                "from_user_id": "BSUID_NTOKOZO_0001",
+                "from_parent_user_id": "PARENT_BSUID_NTOKOZO_0001",
+                "timestamp": "1757671489",
+                "event": "call_transcription_available",
+                "call_transcript": {
+                  "document": {
+                    "id": "1002764438271669",
+                    "sha256": "/8mHTPJRWqvv3LkFGlqgbtEXOj5WIEGoWXGBCFh1CI0=",
+                    "mime_type": "application/json",
+                    "url": "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1002764438271669&ext=1757675089&hash=ATuKz9Xq"
+                  }
+                }
+              }
+            ]
+          },
+          "field": "calls"
+        }
+      ]
+    }
+  ]
+}

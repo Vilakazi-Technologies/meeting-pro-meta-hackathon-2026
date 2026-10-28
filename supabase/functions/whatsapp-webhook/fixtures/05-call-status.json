@@ -1,0 +1,31 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "27115550142",
+              "phone_number_id": "106540352242922"
+            },
+            "statuses": [
+              {
+                "id": "wacid.HBgLMjc4MjEyMzQ1NjcVAgASGCA5QkE3RjkxMEQwQzlDNEE1RjM4RDJCMUM3RUYyQTRCNQA=",
+                "timestamp": "1757671201",
+                "type": "call",
+                "status": "RINGING",
+                "recipient_id": "27115550142",
+                "recipient_user_id": "BSUID_LUMIQ_0001",
+                "recipient_parent_user_id": "PARENT_BSUID_LUMIQ_0001"
+              }
+            ]
+          },
+          "field": "calls"
+        }
+      ]
+    }
+  ]
+}
