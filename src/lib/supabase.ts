@@ -6,14 +6,9 @@ import 'react-native-url-polyfill/auto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
-function env(name: string): string {
-  const value = process.env[name]?.trim();
-  return value ?? '';
-}
-
 export function getSupabaseConfig(): { url: string; anonKey: string } | null {
-  const url = env('EXPO_PUBLIC_SUPABASE_URL');
-  const anonKey = env('EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? '';
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? '';
   if (!url || !anonKey) return null;
   return { url, anonKey };
 }
