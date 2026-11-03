@@ -17,3 +17,4 @@ web-build/
 .DS_Store
 expo-qr.png
 .vercel
+.env*

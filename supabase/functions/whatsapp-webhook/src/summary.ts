@@ -40,9 +40,27 @@ export interface SummaryActionItem {
   owner: string | null;
 }
 
+export type SummaryDecisionKind = "decision" | "agreement" | "unresolved" | "commitment";
+
+export interface SummaryDecision {
+  text: string;
+  kind: SummaryDecisionKind;
+}
+
+export interface SummaryFollowUp {
+  text: string;
+  owner: string | null;
+  due_hint: string | null;
+}
+
 export interface ParsedSummary {
   title: string;
   summary: string;
+  executiveSummary: string;
+  topics: string[];
+  decisions: SummaryDecision[];
+  followUps: SummaryFollowUp[];
+  sentimentNote: string | null;
   actionItems: SummaryActionItem[];
 }
 
@@ -54,9 +72,16 @@ export interface SummaryDb {
     title: string,
     summary: string,
     model: string,
-    actionItems: SummaryActionItem[],
+    parsed: ParsedSummary,
   ): Promise<void>;
   markSummaryFailed(transcriptId: string, error: string): Promise<void>;
+  beginSummarizeJob?(transcriptId: string, businessId: string): Promise<string | null>;
+  finishSummarizeJob?(
+    jobId: string | null,
+    status: "ready" | "failed",
+    model?: string,
+    error?: string,
+  ): Promise<void>;
 }
 
 export interface SummaryDeps {
@@ -94,12 +119,17 @@ last must be }.
 The object has exactly these keys:
   "title":        a short label for this call, at most 60 characters, plain
                   text, no quotes. Describe what the call was about.
-  "summary":      thorough but succinct meeting minutes as plain text. Use short
-                  section labels on their own lines where helpful, e.g.
-                  "Discussion:", "Decisions:", "Next steps:", "Notes:". Cover
-                  what was said, what was agreed, and what must happen next.
-                  Aim for completeness without inventing detail — typically
-                  six to fourteen sentences total.
+  "executive_summary": two or three sentences — the headline for a busy executive.
+  "summary":      thorough meeting minutes as plain text. Use short section
+                  labels on their own lines where helpful. Aim for completeness
+                  without inventing detail — typically six to fourteen sentences.
+  "topics":       array of short strings — main discussion themes (max 8).
+  "decisions":    array of {"text": string, "kind": "decision"|"agreement"|
+                  "unresolved"|"commitment"} — only explicit outcomes from the call.
+  "follow_ups":   array of {"text": string, "owner": string or null, "due_hint":
+                  string or null} — promised next steps or outstanding commitments.
+  "sentiment_note": one cautious sentence about overall tone (e.g. cooperative,
+                  concerned, urgent). Prefix mentally as inference, not fact.
   "action_items": an array of objects, each {"text": string, "owner": string or null}.
 
 Rules:
@@ -128,8 +158,82 @@ export function buildRequest(fullText: string): ModelRequest {
 
 const MAX_TITLE = 80;
 const MAX_SUMMARY = 8000;
+const MAX_EXECUTIVE = 1200;
 const MAX_ACTION_ITEMS = 20;
 const MAX_ACTION_TEXT = 300;
+const MAX_TOPICS = 8;
+const MAX_TOPIC_LEN = 120;
+const MAX_DECISIONS = 15;
+const MAX_FOLLOW_UPS = 15;
+const MAX_SENTIMENT = 400;
+
+const DECISION_KINDS = new Set<SummaryDecisionKind>([
+  "decision",
+  "agreement",
+  "unresolved",
+  "commitment",
+]);
+
+function parseStringArray(raw: unknown, maxItems: number, maxLen: number, field: string): string[] {
+  if (!Array.isArray(raw)) throw new SummaryParseError(`${field} missing or not an array`);
+  const out: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "string") throw new SummaryParseError(`${field} entry was not a string`);
+    const t = entry.trim();
+    if (!t) continue;
+    out.push(t.slice(0, maxLen));
+  }
+  if (out.length > maxItems) {
+    throw new SummaryParseError(`${field} had more than ${maxItems} entries`);
+  }
+  return out;
+}
+
+function parseDecisions(raw: unknown): SummaryDecision[] {
+  if (!Array.isArray(raw)) throw new SummaryParseError("decisions missing or not an array");
+  const out: SummaryDecision[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      throw new SummaryParseError("a decision was not an object");
+    }
+    const d = entry as Record<string, unknown>;
+    const text = typeof d.text === "string" ? d.text.trim() : "";
+    if (!text) throw new SummaryParseError("a decision had no text");
+    const kindRaw = typeof d.kind === "string" ? d.kind.trim().toLowerCase() : "decision";
+    const kind = DECISION_KINDS.has(kindRaw as SummaryDecisionKind)
+      ? (kindRaw as SummaryDecisionKind)
+      : "decision";
+    out.push({ text: text.slice(0, MAX_ACTION_TEXT), kind });
+  }
+  if (out.length > MAX_DECISIONS) {
+    throw new SummaryParseError(`too many decisions (max ${MAX_DECISIONS})`);
+  }
+  return out;
+}
+
+function parseFollowUps(raw: unknown): SummaryFollowUp[] {
+  if (!Array.isArray(raw)) throw new SummaryParseError("follow_ups missing or not an array");
+  const out: SummaryFollowUp[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      throw new SummaryParseError("a follow-up was not an object");
+    }
+    const f = entry as Record<string, unknown>;
+    const text = typeof f.text === "string" ? f.text.trim() : "";
+    if (!text) throw new SummaryParseError("a follow-up had no text");
+    const owner = typeof f.owner === "string" && f.owner.trim()
+      ? f.owner.trim().slice(0, 120)
+      : null;
+    const due_hint = typeof f.due_hint === "string" && f.due_hint.trim()
+      ? f.due_hint.trim().slice(0, 120)
+      : null;
+    out.push({ text: text.slice(0, MAX_ACTION_TEXT), owner, due_hint });
+  }
+  if (out.length > MAX_FOLLOW_UPS) {
+    throw new SummaryParseError(`too many follow-ups (max ${MAX_FOLLOW_UPS})`);
+  }
+  return out;
+}
 
 export class SummaryParseError extends Error {}
 
@@ -167,6 +271,19 @@ export function parseSummary(raw: string): ParsedSummary {
   const summary = typeof obj.summary === "string" ? obj.summary.trim() : "";
   if (!summary) throw new SummaryParseError("missing or empty summary");
 
+  const executiveSummary = typeof obj.executive_summary === "string"
+    ? obj.executive_summary.trim()
+    : summary.split(/\n/)[0]?.slice(0, MAX_EXECUTIVE) ?? summary.slice(0, MAX_EXECUTIVE);
+
+  const topics = obj.topics !== undefined
+    ? parseStringArray(obj.topics, MAX_TOPICS, MAX_TOPIC_LEN, "topics")
+    : [];
+  const decisions = obj.decisions !== undefined ? parseDecisions(obj.decisions) : [];
+  const followUps = obj.follow_ups !== undefined ? parseFollowUps(obj.follow_ups) : [];
+
+  const sentimentRaw = typeof obj.sentiment_note === "string" ? obj.sentiment_note.trim() : "";
+  const sentimentNote = sentimentRaw ? sentimentRaw.slice(0, MAX_SENTIMENT) : null;
+
   // An absent array is a failure; an EMPTY array is a valid, expected answer.
   if (!Array.isArray(obj.action_items)) {
     throw new SummaryParseError("action_items missing or not an array");
@@ -194,6 +311,11 @@ export function parseSummary(raw: string): ParsedSummary {
   return {
     title: title.slice(0, MAX_TITLE),
     summary: summary.slice(0, MAX_SUMMARY),
+    executiveSummary: executiveSummary.slice(0, MAX_EXECUTIVE),
+    topics,
+    decisions,
+    followUps,
+    sentimentNote,
     actionItems,
   };
 }
@@ -236,6 +358,11 @@ export async function summarizeTranscript(
     };
   }
 
+  let jobId: string | null = null;
+  if (deps.db.beginSummarizeJob) {
+    jobId = await deps.db.beginSummarizeJob(transcriptId, target.business_id);
+  }
+
   let parsed: ParsedSummary;
   let response: ModelResponse;
   try {
@@ -243,8 +370,10 @@ export async function summarizeTranscript(
     parsed = parseSummary(response.text);
   } catch (err) {
     const reason = redact(err instanceof Error ? err.message : String(err));
-    // Record the failure. The transcript keeps its text; no summary is written.
     await deps.db.markSummaryFailed(transcriptId, reason);
+    if (deps.db.finishSummarizeJob) {
+      await deps.db.finishSummarizeJob(jobId, "failed", undefined, reason);
+    }
     logWarn("summary.failed", { transcript_id: shortId(transcriptId), error: reason });
     return {
       outcome: "failed",
@@ -252,14 +381,30 @@ export async function summarizeTranscript(
     };
   }
 
-  // One transaction. Until this returns, nothing has been written.
-  await deps.db.applySummary(
-    transcriptId,
-    parsed.title,
-    parsed.summary,
-    response.model,
-    parsed.actionItems,
-  );
+  try {
+    await deps.db.applySummary(
+      transcriptId,
+      parsed.title,
+      parsed.summary,
+      response.model,
+      parsed,
+    );
+  } catch (err) {
+    const reason = redact(err instanceof Error ? err.message : String(err));
+    await deps.db.markSummaryFailed(transcriptId, reason);
+    if (deps.db.finishSummarizeJob) {
+      await deps.db.finishSummarizeJob(jobId, "failed", undefined, reason);
+    }
+    logWarn("summary.failed", { transcript_id: shortId(transcriptId), error: reason });
+    return {
+      outcome: "failed",
+      message: "This transcript could not be summarised. You can try again.",
+    };
+  }
+
+  if (deps.db.finishSummarizeJob) {
+    await deps.db.finishSummarizeJob(jobId, "ready", response.model);
+  }
 
   // Counts and ids only — never the transcript or the summary text.
   logInfo("summary.stored", {

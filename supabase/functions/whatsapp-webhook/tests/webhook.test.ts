@@ -725,7 +725,12 @@ test("retry: without Meta's hash there is nothing to verify against, so it refus
 
 const GOOD_REPLY = JSON.stringify({
   title: 'Quarterly reconciliation call',
+  executive_summary: 'Ntokozo and Thandi aligned on sending the reconciliation statement by Friday.',
   summary: 'Ntokozo called about the quarterly reconciliation. Thandi had the outstanding invoices to hand and agreed to send a statement.',
+  topics: ['Quarterly reconciliation', 'Outstanding invoices'],
+  decisions: [{ text: 'Thandi will send the statement', kind: 'agreement' }],
+  follow_ups: [{ text: 'Send statement to Ntokozo', owner: 'Thandi', due_hint: 'Friday' }],
+  sentiment_note: 'The conversation sounded cooperative and practical.',
   action_items: [{ text: 'Send the statement to Ntokozo by Friday', owner: 'Thandi' }],
 });
 

@@ -184,6 +184,106 @@ export function TranscriptDetailScreen({ route, navigation }: Props) {
                       ? 'A summary could not be generated for this call. The transcript below is complete and unaffected.'
                       : 'Automatic summaries are not switched on for this account yet. The full transcript below is complete.'}
                 </Text>
+                {transcript.executiveSummary ? (
+                  <>
+                    <Text style={[styles.subsectionLabel, { color: palette.text }]}>
+                      Executive summary
+                    </Text>
+                    <Text style={[styles.summaryText, { color: palette.textSecondary }]}>
+                      {transcript.executiveSummary}
+                    </Text>
+                  </>
+                ) : null}
+                {transcript.topics && transcript.topics.length > 0 ? (
+                  <>
+                    <Text style={[styles.subsectionLabel, { color: palette.text }]}>
+                      Topics
+                    </Text>
+                    <View style={styles.topicRow}>
+                      {transcript.topics.map((topic) => (
+                        <View
+                          key={topic}
+                          style={[styles.topicChip, { backgroundColor: palette.glassFill }]}
+                        >
+                          <Text style={[styles.topicChipText, { color: palette.textSecondary }]}>
+                            {topic}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
+                {transcript.sentimentNote ? (
+                  <>
+                    <Text style={[styles.subsectionLabel, { color: palette.text }]}>
+                      Tone (inferred)
+                    </Text>
+                    <Text style={[styles.disclaimer, { color: palette.textMuted }]}>
+                      AI inference only — not an objective measure of how anyone felt.
+                    </Text>
+                    <Text style={[styles.summaryText, { color: palette.textSecondary }]}>
+                      {transcript.sentimentNote}
+                    </Text>
+                  </>
+                ) : null}
+              </GlassCard>
+            </>
+          )}
+
+          {transcript.decisions && transcript.decisions.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { color: palette.text }]}>
+                Decisions & agreements
+              </Text>
+              <GlassCard style={styles.block}>
+                {transcript.decisions.map((d) => (
+                  <View key={d.id} style={styles.listRow}>
+                    <Ionicons
+                      name={
+                        d.kind === 'unresolved'
+                          ? 'help-circle-outline'
+                          : d.kind === 'commitment'
+                            ? 'hand-left-outline'
+                            : 'checkmark-circle-outline'
+                      }
+                      size={18}
+                      color={d.kind === 'unresolved' ? palette.textMuted : BRAND.accent}
+                    />
+                    <View style={styles.listRowBody}>
+                      <Text style={[styles.listKind, { color: palette.textMuted }]}>
+                        {d.kind.replace('_', ' ')}
+                      </Text>
+                      <Text style={[styles.listText, { color: palette.textSecondary }]}>
+                        {d.text}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </GlassCard>
+            </>
+          )}
+
+          {transcript.followUps && transcript.followUps.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { color: palette.text }]}>
+                Follow-ups
+              </Text>
+              <GlassCard style={styles.block}>
+                {transcript.followUps.map((f) => (
+                  <View key={f.id} style={styles.listRow}>
+                    <Ionicons name="arrow-forward-circle-outline" size={18} color={BRAND.gold} />
+                    <View style={styles.listRowBody}>
+                      <Text style={[styles.listText, { color: palette.textSecondary }]}>
+                        {f.text}
+                      </Text>
+                      {(f.assignee || f.dueHint) && (
+                        <Text style={[styles.listMeta, { color: palette.textMuted }]}>
+                          {[f.assignee, f.dueHint].filter(Boolean).join(' · ')}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
               </GlassCard>
             </>
           )}
@@ -270,6 +370,16 @@ const styles = StyleSheet.create({
   aiHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
   aiLabel: { fontSize: FONT.sm, fontWeight: '700' },
   summaryText: { fontSize: FONT.base, lineHeight: 24 },
+  subsectionLabel: { fontSize: FONT.sm, fontWeight: '700', marginTop: 14, marginBottom: 6 },
+  disclaimer: { fontSize: FONT.xs, lineHeight: 16, marginBottom: 6, fontStyle: 'italic' },
+  topicRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  topicChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.full },
+  topicChipText: { fontSize: FONT.sm, fontWeight: '500' },
+  listRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  listRowBody: { flex: 1, gap: 2 },
+  listKind: { fontSize: FONT.xs, fontWeight: '600', textTransform: 'capitalize' },
+  listText: { fontSize: FONT.base, lineHeight: 22 },
+  listMeta: { fontSize: FONT.sm, marginTop: 2 },
   segmentCard: { marginBottom: 8 },
   segmentHeader: {
     flexDirection: 'row',

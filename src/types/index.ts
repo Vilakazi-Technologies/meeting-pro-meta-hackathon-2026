@@ -17,6 +17,21 @@ export interface ActionItem {
   completed: boolean;
 }
 
+export type DecisionKind = 'decision' | 'agreement' | 'unresolved' | 'commitment';
+
+export interface MeetingDecision {
+  id: string;
+  text: string;
+  kind: DecisionKind;
+}
+
+export interface MeetingFollowUp {
+  id: string;
+  text: string;
+  assignee?: string;
+  dueHint?: string;
+}
+
 export interface TranscriptSegment {
   id: string;
   speakerId: string;
@@ -40,6 +55,12 @@ export interface Transcript {
   participants: string[];
   tags: string[];
   summary?: string;
+  executiveSummary?: string;
+  topics?: string[];
+  decisions?: MeetingDecision[];
+  followUps?: MeetingFollowUp[];
+  /** Inferred tone — not objective fact; show with disclaimer. */
+  sentimentNote?: string;
   summaryStatus?: SummaryStatus;
   actionItems?: ActionItem[];
   segments?: TranscriptSegment[];

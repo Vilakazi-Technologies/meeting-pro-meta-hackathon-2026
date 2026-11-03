@@ -7,7 +7,7 @@
 //   transcripts.call_id                unique  -> upsert merges, never duplicates
 //   transcript_segments (transcript_id, segment_index) unique -> replace, not append
 import { DuplicateEventError } from "../src/db.ts";
-import type { SummaryActionItem, SummaryDb, SummaryTarget } from "../src/summary.ts";
+import type { ParsedSummary, SummaryDb, SummaryTarget } from "../src/summary.ts";
 import type {
   CallUpsert,
   Db,
@@ -37,6 +37,28 @@ export class FakeDb implements Db, SummaryDb {
     text: string;
     owner: string | null;
     is_ai_generated: boolean;
+  }[] = [];
+  readonly decisions: {
+    id: string;
+    transcript_id: string;
+    business_id: string;
+    text: string;
+    kind: string;
+    is_ai_generated: boolean;
+  }[] = [];
+  readonly followUps: {
+    id: string;
+    transcript_id: string;
+    business_id: string;
+    text: string;
+    owner: string | null;
+    due_hint: string | null;
+    is_ai_generated: boolean;
+  }[] = [];
+  readonly jobs: {
+    id: string;
+    transcript_id: string;
+    status: string;
   }[] = [];
   private readonly numbers = new Map<string, NumberRoute>();
   private seq = 0;
@@ -142,16 +164,15 @@ export class FakeDb implements Db, SummaryDb {
     title: string,
     summary: string,
     model: string,
-    actionItems: SummaryActionItem[],
+    parsed: ParsedSummary,
   ): Promise<void> {
     const t = this.transcripts.find((x) => x.id === transcriptId);
     if (!t) return Promise.reject(new Error("transcript not found"));
-    // Mirrors the database function: AI items are replaced, hand-made ones stay.
     for (let i = this.actionItems.length - 1; i >= 0; i--) {
       const a = this.actionItems[i];
       if (a.transcript_id === transcriptId && a.is_ai_generated) this.actionItems.splice(i, 1);
     }
-    for (const item of actionItems) {
+    for (const item of parsed.actionItems) {
       if (!item.text.trim()) continue;
       this.actionItems.push({
         id: this.id("ai"),
@@ -162,8 +183,49 @@ export class FakeDb implements Db, SummaryDb {
         is_ai_generated: true,
       });
     }
+    for (let i = this.decisions.length - 1; i >= 0; i--) {
+      const d = this.decisions[i];
+      if (d.transcript_id === transcriptId && d.is_ai_generated) this.decisions.splice(i, 1);
+    }
+    for (const d of parsed.decisions) {
+      this.decisions.push({
+        id: this.id("dec"),
+        transcript_id: transcriptId,
+        business_id: t.business_id,
+        text: d.text,
+        kind: d.kind,
+        is_ai_generated: true,
+      });
+    }
+    for (let i = this.followUps.length - 1; i >= 0; i--) {
+      const f = this.followUps[i];
+      if (f.transcript_id === transcriptId && f.is_ai_generated) this.followUps.splice(i, 1);
+    }
+    for (const f of parsed.followUps) {
+      this.followUps.push({
+        id: this.id("fu"),
+        transcript_id: transcriptId,
+        business_id: t.business_id,
+        text: f.text,
+        owner: f.owner,
+        due_hint: f.due_hint,
+        is_ai_generated: true,
+      });
+    }
     this.summaryStatus.set(transcriptId, "ready");
     this.summaries.set(transcriptId, { title, summary, model, error: null });
+    return Promise.resolve();
+  }
+
+  beginSummarizeJob(transcriptId: string, _businessId: string): Promise<string | null> {
+    const id = this.id("job");
+    this.jobs.push({ id, transcript_id: transcriptId, status: "running" });
+    return Promise.resolve(id);
+  }
+
+  finishSummarizeJob(jobId: string | null, status: "ready" | "failed"): Promise<void> {
+    const job = this.jobs.find((j) => j.id === jobId);
+    if (job) job.status = status;
     return Promise.resolve();
   }
 

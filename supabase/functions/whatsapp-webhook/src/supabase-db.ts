@@ -15,7 +15,7 @@ import type {
   WebhookEventRow,
 } from "./db.ts";
 import { DuplicateEventError } from "./db.ts";
-import type { SummaryActionItem, SummaryDb, SummaryTarget } from "./summary.ts";
+import type { SummaryDb, SummaryTarget, ParsedSummary } from "./summary.ts";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -176,18 +176,56 @@ export class SupabaseDb implements Db, SummaryDb {
     title: string,
     summary: string,
     model: string,
-    actionItems: SummaryActionItem[],
+    parsed: ParsedSummary,
   ): Promise<void> {
-    // One database function, one transaction: the transcript fields and the
-    // action items land together or not at all.
     const { error } = await this.client.rpc("apply_transcript_summary", {
       p_transcript_id: transcriptId,
       p_title: title,
       p_summary: summary,
       p_model: model,
-      p_action_items: actionItems,
+      p_action_items: parsed.actionItems,
+      p_executive_summary: parsed.executiveSummary,
+      p_topics: parsed.topics,
+      p_decisions: parsed.decisions,
+      p_follow_ups: parsed.followUps,
+      p_sentiment_note: parsed.sentimentNote,
     });
     if (error) throw new Error(`apply_transcript_summary failed: ${error.message}`);
+  }
+
+  async beginSummarizeJob(transcriptId: string, businessId: string): Promise<string | null> {
+    const { data, error } = await this.client
+      .from("ai_processing_jobs")
+      .insert({
+        business_id: businessId,
+        transcript_id: transcriptId,
+        job_type: "summarize",
+        status: "running",
+        started_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (error) return null;
+    return data.id as string;
+  }
+
+  async finishSummarizeJob(
+    jobId: string | null,
+    status: "ready" | "failed",
+    model?: string,
+    error?: string,
+  ): Promise<void> {
+    if (!jobId) return;
+    const { error: err } = await this.client
+      .from("ai_processing_jobs")
+      .update({
+        status,
+        model: model ?? null,
+        error: error?.slice(0, 500) ?? null,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", jobId);
+    if (err) throw new Error(`ai_processing_jobs update failed: ${err.message}`);
   }
 
   async markSummaryFailed(transcriptId: string, error: string): Promise<void> {

@@ -49,10 +49,13 @@ const LIST_SELECT = `
 ` as const;
 
 const DETAIL_SELECT = `
-  id, status, created_at, duration_seconds, summary, title, summary_status,
+  id, status, created_at, duration_seconds, summary, executive_summary, topics, sentiment_note,
+  title, summary_status,
   calls ( started_at, duration_seconds, counterparty_phone, direction ),
   transcript_tags ( tags ( name ) ),
   action_items ( id, text, owner, status ),
+  meeting_decisions ( id, text, kind ),
+  meeting_follow_ups ( id, text, owner, due_hint ),
   transcript_segments ( id, segment_index, speaker, channel, start_seconds, text )
 ` as const;
 
@@ -70,10 +73,15 @@ interface DbRow {
   created_at: string;
   duration_seconds: number | null;
   summary: string | null;
+  executive_summary?: string | null;
+  topics?: unknown;
+  sentiment_note?: string | null;
   summary_status: DbSummaryStatus;
   calls: DbCall | null;
   transcript_tags: { tags: { name: string } | null }[];
   action_items: { id: string; text: string; owner: string | null; status: DbActionStatus }[];
+  meeting_decisions?: { id: string; text: string; kind: string }[];
+  meeting_follow_ups?: { id: string; text: string; owner: string | null; due_hint: string | null }[];
   transcript_segments?: {
     id: string;
     segment_index: number;
@@ -136,6 +144,30 @@ function deriveParticipants(call: DbCall | null): string[] {
 // states. `cancelled` is neither done nor open, so cancelled items are omitted
 // rather than shown as either. `owner` maps to `assignee`; `due_date` and
 // `is_ai_generated` have no UI field and are dropped.
+function parseTopics(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((t): t is string => typeof t === 'string' && t.trim() !== '').map((t) => t.trim());
+}
+
+function mapDecisions(rows: DbRow['meeting_decisions']): import('../types').MeetingDecision[] {
+  return (rows ?? []).map((d) => ({
+    id: d.id,
+    text: d.text,
+    kind: (['decision', 'agreement', 'unresolved', 'commitment'].includes(d.kind)
+      ? d.kind
+      : 'decision') as import('../types').DecisionKind,
+  }));
+}
+
+function mapFollowUps(rows: DbRow['meeting_follow_ups']): import('../types').MeetingFollowUp[] {
+  return (rows ?? []).map((f) => ({
+    id: f.id,
+    text: f.text,
+    assignee: f.owner ?? undefined,
+    dueHint: f.due_hint ?? undefined,
+  }));
+}
+
 function mapActionItems(rows: DbRow['action_items']): ActionItem[] {
   return rows
     .filter((a) => a.status !== 'cancelled')
@@ -200,6 +232,11 @@ function toTranscript(row: DbRow): { transcript: Transcript; speakers: Speaker[]
         .map((tt) => tt.tags?.name)
         .filter((n): n is string => Boolean(n)),
       summary: row.summary ?? undefined,
+      executiveSummary: row.executive_summary ?? undefined,
+      topics: parseTopics(row.topics),
+      decisions: mapDecisions(row.meeting_decisions),
+      followUps: mapFollowUps(row.meeting_follow_ups),
+      sentimentNote: row.sentiment_note ?? undefined,
       // 'ready' with no text would be a contradiction; treat it as not run.
       summaryStatus: row.summary_status === 'ready' && !row.summary
         ? 'pending'
