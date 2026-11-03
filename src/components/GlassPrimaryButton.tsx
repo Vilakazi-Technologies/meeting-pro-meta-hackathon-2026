@@ -37,6 +37,7 @@ export function GlassPrimaryButton({
       testID={testID}
       onPress={onPress}
       disabled={inactive}
+      accessibilityRole="button"
       style={({ pressed }) => [
         styles.wrap,
         { backgroundColor: inactive ? BRAND.gray700 : BRAND.qualityBlue },
@@ -77,6 +78,7 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.92,
+    transform: [{ scale: 0.97 }],
   },
   label: {
     color: '#FFF',

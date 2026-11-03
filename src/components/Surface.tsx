@@ -62,7 +62,16 @@ export function Surface({
 
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.96 : 1 }]}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          {
+            opacity: pressed ? 0.96 : 1,
+            transform: [{ scale: pressed ? 0.988 : 1 }],
+          },
+        ]}
+      >
         {content}
       </Pressable>
     );

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { DemoEnvironmentBanner } from '../components/DemoEnvironmentBanner';
 import { GlassCard } from '../components/GlassCard';
 import { MeetingProMark } from '../components/MeetingProMark';
 import { TabScreenLayout } from '../components/TabScreenLayout';
@@ -62,6 +63,8 @@ export function HomeScreen({ navigation }: Props) {
                 onPress: () => navigation.navigate('WhatsAppConnect'),
               }}
             />
+
+            <DemoEnvironmentBanner />
 
             <WhatsAppStatusCard
               palette={palette}

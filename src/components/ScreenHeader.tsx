@@ -42,7 +42,16 @@ export function ScreenHeader({
     <View style={styles.wrapper}>
       <View style={styles.textBlock}>
         {showBrandEyebrow && (
-          <View style={styles.eyebrowRow}>
+          <View
+            style={[
+              styles.eyebrowChip,
+              {
+                borderColor: palette.glassBorder,
+                backgroundColor:
+                  effectiveTheme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              },
+            ]}
+          >
             <View style={[styles.eyebrowDot, { backgroundColor: BRAND.qualityBlue }]} />
             <Text style={[styles.eyebrow, { color: palette.textMuted }]}>{eyebrowText}</Text>
           </View>
@@ -122,11 +131,16 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   textBlock: { flex: 1, minWidth: 0 },
-  eyebrowRow: {
+  eyebrowChip: {
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   eyebrowDot: {
     width: 6,

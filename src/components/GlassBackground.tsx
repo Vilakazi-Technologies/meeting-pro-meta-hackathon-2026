@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { COLORS, BRAND } from '../constants/theme';
 import { VILATECH_STORY } from '../constants/glass';
 import { webOnlyStyle } from '../utils/webStyles';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 interface GlassBackgroundProps {
   children: ReactNode;
@@ -23,6 +24,7 @@ export function GlassBackground({ children, style }: GlassBackgroundProps) {
   const palette = COLORS[effectiveTheme];
   const isDark = effectiveTheme === 'dark';
   const story = isDark ? VILATECH_STORY.dark : VILATECH_STORY.light;
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -61,8 +63,10 @@ export function GlassBackground({ children, style }: GlassBackgroundProps) {
             styles.storyWeb,
             webOnlyStyle({
               background: story.css,
-              animation: 'meeting-pro-story-ambient 36s ease-in-out infinite alternate',
-              willChange: 'transform',
+              animation: reduceMotion
+                ? 'none'
+                : 'meeting-pro-story-ambient 36s ease-in-out infinite alternate',
+              willChange: reduceMotion ? 'auto' : 'transform',
             }),
           ]}
         />

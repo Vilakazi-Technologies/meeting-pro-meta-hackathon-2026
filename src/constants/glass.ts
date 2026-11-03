@@ -86,7 +86,8 @@ export const GLASS = {
       opacity: 0.35,
       radius: 24,
     },
-    frame: '0 28px 64px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.08)',
+    frame:
+      '0 28px 80px -12px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.14)',
   },
   radius: RADIUS,
   spacing: SPACING,

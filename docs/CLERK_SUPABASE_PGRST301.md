@@ -4,7 +4,17 @@ Supabase returns this when PostgREST cannot verify the **Authorization** JWT.
 
 ---
 
-## Your project uses ES256 signing keys (not legacy HS256)
+## Your `.env` Clerk app (must match Supabase)
+
+The publishable key in this project is the **relieved-tortoise-3127** Clerk instance:
+
+`relieved-tortoise-3127.clerk.accounts.dev`
+
+Supabase → **Authentication → Providers → Clerk** must use **that** domain.
+
+Do **not** use `intent-mayfly-1900.clerk.accounts.dev` unless you also replace `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` with that app’s key. Mixing the two causes **No suitable key or wrong key type**.
+
+Khaya membership `user_3KyeB5EWkTYwIrctGOwlxpr5fbz` only works when you sign in on the **same** Clerk app as that user.
 
 JWKS URL (yours):
 

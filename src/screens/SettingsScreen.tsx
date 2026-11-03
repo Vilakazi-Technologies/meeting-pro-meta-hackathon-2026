@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { DemoEnvironmentBanner } from '../components/DemoEnvironmentBanner';
 import { TabScreenLayout } from '../components/TabScreenLayout';
 import { GlassCard } from '../components/GlassCard';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -46,6 +47,8 @@ export function SettingsScreen({ navigation }: Props) {
   return (
     <TabScreenLayout>
           <ScreenHeader title="Settings" subtitle={profile.businessName ?? ''} />
+
+          <DemoEnvironmentBanner compact />
 
           <GlassCard style={styles.profileCard}>
             <View style={[styles.avatar, { backgroundColor: `${BRAND.accent}33` }]}>
@@ -210,7 +213,13 @@ export function SettingsScreen({ navigation }: Props) {
           <GlassCard style={styles.vilatechCard}>
             <Text style={[styles.vilatechTitle, { color: palette.text }]}>VILATECH</Text>
             <Text style={[styles.vilatechDesc, { color: palette.textSecondary }]}>
-              Meeting Pro — WhatsApp Business call transcripts and AI meeting minutes
+              Meeting Pro turns WhatsApp Business conversations into transcripts, Muse Spark
+              minutes, and action items — built for teams who live in chat, not in meeting
+              rooms.
+            </Text>
+            <Text style={[styles.vilatechHint, { color: palette.textMuted }]}>
+              Demonstration data is labelled; live Meta integration activates when your Cloud API
+              credentials are connected.
             </Text>
           </GlassCard>
 
@@ -314,6 +323,13 @@ const styles = StyleSheet.create({
   vilatechCard: { alignItems: 'center', paddingVertical: 24 },
   vilatechTitle: { ...TYPO.title2, letterSpacing: 4 },
   vilatechDesc: { fontSize: FONT.sm, textAlign: 'center', marginTop: 6 },
+  vilatechHint: {
+    fontSize: FONT.xs,
+    textAlign: 'center',
+    marginTop: 10,
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
   vilatechLink: { fontSize: FONT.base, fontWeight: '600', marginTop: 8 },
   version: { fontSize: FONT.xs, textAlign: 'center', marginTop: 16 },
 });

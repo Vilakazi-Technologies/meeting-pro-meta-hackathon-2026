@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { DATA_SOURCE } from './transcriptSource';
+import { explainSupabaseAuthError } from '../lib/clerkEnv';
 
 export interface WhatsAppNumber {
   displayPhoneNumber: string;
@@ -79,8 +80,8 @@ export function useBusinessProfile(): BusinessProfile {
           if (!cancelled) ({ business, whatsapp } = await load());
         }
         if (cancelled) return;
-        if (business.error) throw new Error(business.error.message);
-        if (whatsapp.error) throw new Error(whatsapp.error.message);
+        if (business.error) throw new Error(explainSupabaseAuthError(business.error.message));
+        if (whatsapp.error) throw new Error(explainSupabaseAuthError(whatsapp.error.message));
 
         setBusinessName(business.data?.name ?? null);
         setNumber(
