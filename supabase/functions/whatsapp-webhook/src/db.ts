@@ -34,6 +34,10 @@ export interface CallUpsert {
   duration_seconds: number | null;
   status: string | null;
   transcription_enabled?: boolean;
+  /** Softphone: Meta's SDP offer from a user-initiated connect webhook. */
+  sdp_offer?: string | null;
+  ring_state?: "ringing" | "ended" | null;
+  counterparty_name?: string | null;
 }
 
 export interface TranscriptUpsert {

@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SupabaseProvider } from './contexts/SupabaseContext';
 import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
 import { WelcomeScreen } from './screens/WelcomeScreen';
+import { Softphone } from './softphone/Softphone';
 import { DATA_SOURCE, isSupabaseConfigured } from './lib/supabaseConfig';
 import { SupabaseSetupScreen } from './screens/SupabaseSetupScreen';
 import { RootNavigator } from './navigation/RootNavigator';
@@ -61,9 +62,14 @@ function WorkspaceGate() {
   }
 
   return (
-    <NavigationContainer key={mode === 'none' ? 'setup' : mode}>
-      <RootNavigator initialRouteName={mode === 'none' ? 'WhatsAppConnect' : 'Main'} />
-    </NavigationContainer>
+    <>
+      <NavigationContainer key={mode === 'none' ? 'setup' : mode}>
+        <RootNavigator initialRouteName={mode === 'none' ? 'WhatsAppConnect' : 'Main'} />
+      </NavigationContainer>
+      {mode === 'member' && Platform.OS === 'web' && DATA_SOURCE === 'supabase' ? (
+        <Softphone />
+      ) : null}
+    </>
   );
 }
 

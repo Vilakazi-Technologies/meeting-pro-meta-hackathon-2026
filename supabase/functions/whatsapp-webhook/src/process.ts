@@ -152,7 +152,7 @@ async function processCall(
     } else if (
       eventType === "connect" || eventType === "call_created" || eventType === "terminate"
     ) {
-      await ingestLifecycle(call, route, deps, phoneNumberId);
+      await ingestLifecycle(call, route, deps, phoneNumberId, value);
     } else {
       // Unknown or not-yet-supported event (call_recording_available lands here).
       // It is logged and acknowledged rather than errored: an unrecognised event
@@ -178,6 +178,7 @@ async function ingestLifecycle(
   route: { business_id: string; whatsapp_number_id: string },
   deps: ProcessDeps,
   phoneNumberId: string | null = null,
+  value: MetaChangeValue = {},
 ): Promise<void> {
   const direction = mapDirection(call.direction);
   if (!direction) {
@@ -190,6 +191,17 @@ async function ingestLifecycle(
     ? unixToIso(call.start_time) ?? unixToIso(call.timestamp)
     : unixToIso(call.timestamp);
 
+  // A customer calling in: keep Meta's offer so a member's browser can answer
+  // within Meta's 30-60 second window. Business-initiated connects carry an
+  // answer, not an offer, and never ring.
+  const offer = call.event === "connect" && direction === "user_initiated" &&
+      call.session?.sdp_type === "offer" && call.session.sdp
+    ? call.session.sdp
+    : null;
+  const contact = value.contacts?.find((c) =>
+    (call.from && c.wa_id === call.from) || (call.from_user_id && c.user_id === call.from_user_id)
+  ) ?? value.contacts?.[0];
+
   await deps.db.upsertCall({
     business_id: route.business_id,
     whatsapp_number_id: route.whatsapp_number_id,
@@ -200,6 +212,9 @@ async function ingestLifecycle(
     ended_at: call.event === "terminate" ? unixToIso(call.end_time) : null,
     duration_seconds: typeof call.duration === "number" ? call.duration : null,
     status: call.status ?? call.event ?? null,
+    sdp_offer: offer,
+    ring_state: offer ? "ringing" : call.event === "terminate" ? "ended" : null,
+    counterparty_name: contact?.profile?.name ?? null,
   });
 
   logInfo("webhook.call_upserted", {

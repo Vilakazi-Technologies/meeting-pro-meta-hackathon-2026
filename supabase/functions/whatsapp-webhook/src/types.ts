@@ -52,10 +52,16 @@ export interface MetaStatusObject {
   recipient_id?: string;
 }
 
+export interface MetaContact {
+  profile?: { name?: string; username?: string };
+  wa_id?: string;
+  user_id?: string;
+}
+
 export interface MetaChangeValue {
   messaging_product?: string;
   metadata?: { display_phone_number?: string; phone_number_id?: string };
-  contacts?: unknown[];
+  contacts?: MetaContact[];
   calls?: MetaCallObject[];
   statuses?: MetaStatusObject[]; // call status webhooks use this INSTEAD of calls
   errors?: unknown[];

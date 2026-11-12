@@ -135,6 +135,21 @@ test("a correctly signed lifecycle event is accepted and stored", async () => {
   assert.equal(db.calls[0].counterparty_bsuid, "BSUID_NTOKOZO_0001");
 });
 
+test("a customer's connect rings the softphone; terminate ends it", async () => {
+  const db = freshDb();
+  const deps = makeDeps(db);
+  await (await handleRequest(await signedRequest(fixtureText("01-call-connect.json")), CONFIG, deps))
+    .processing;
+  assert.equal(db.calls[0].ring_state, "ringing");
+  assert.match(db.calls[0].sdp_offer ?? "", /^v=0/, "Meta's offer is kept for the browser answer");
+  assert.equal(db.calls[0].counterparty_name, "Ntokozo Dlamini");
+
+  await (await handleRequest(await signedRequest(fixtureText("02-call-terminate.json")), CONFIG, deps))
+    .processing;
+  assert.equal(db.calls[0].ring_state, "ended");
+  assert.match(db.calls[0].sdp_offer ?? "", /^v=0/, "a later event does not erase the offer");
+});
+
 test("an unsigned request is logged as unverified and NOT acted on", async () => {
   const db = freshDb();
   const { response, outcome } = await deliver("01-call-connect.json", db, makeDeps(db), false);
