@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Platform, StatusBar } from 'react-native';
+import { ActivityIndicator, Platform, StatusBar, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -12,6 +12,8 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SupabaseProvider } from './contexts/SupabaseContext';
+import { WorkspaceProvider, useWorkspace } from './contexts/WorkspaceContext';
+import { WelcomeScreen } from './screens/WelcomeScreen';
 import { DATA_SOURCE, isSupabaseConfigured } from './lib/supabaseConfig';
 import { SupabaseSetupScreen } from './screens/SupabaseSetupScreen';
 import { RootNavigator } from './navigation/RootNavigator';
@@ -41,6 +43,33 @@ const clerkWebRedirects =
         afterSignOutUrl: `${clerkAppOrigin()}/`,
       }
     : {};
+
+/** Signed-in users with no business see the welcome screen instead of empty tabs. */
+function WorkspaceGate() {
+  const { mode, settingUp, setSettingUp } = useWorkspace();
+
+  if (mode === 'loading') {
+    return (
+      <View style={gateStyles.boot} accessibilityRole="progressbar">
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
+  if (mode === 'none' && !settingUp) {
+    return <WelcomeScreen onConnect={() => setSettingUp(true)} />;
+  }
+
+  return (
+    <NavigationContainer key={mode === 'none' ? 'setup' : mode}>
+      <RootNavigator initialRouteName={mode === 'none' ? 'WhatsAppConnect' : 'Main'} />
+    </NavigationContainer>
+  );
+}
+
+const gateStyles = StyleSheet.create({
+  boot: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0A0A0A' },
+});
 
 function AppContent() {
   const { effectiveTheme } = useTheme();
@@ -85,9 +114,9 @@ function AppContent() {
     <>
       <StatusBar barStyle={barStyle} />
       <SupabaseProvider>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
+        <WorkspaceProvider>
+          <WorkspaceGate />
+        </WorkspaceProvider>
       </SupabaseProvider>
     </>
   );

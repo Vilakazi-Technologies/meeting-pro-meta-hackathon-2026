@@ -92,11 +92,7 @@ export function useBusinessProfile(): BusinessProfile {
               }
             : null
         );
-        setError(
-          business.data?.name
-            ? null
-            : 'No business visible — check Clerk↔Supabase link and business_members row.'
-        );
+        setError(null);
       } catch (err) {
         if (cancelled) return;
         setBusinessName(null);

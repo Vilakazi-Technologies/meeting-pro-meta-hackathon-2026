@@ -5,9 +5,9 @@ export const KHAYA_DEMO_BUSINESS_ID = 'dbdbdbdb-0000-4000-8000-000000000001';
 
 export type AppDataEnvironment = 'mock' | 'demonstration' | 'supabase_live';
 
-export function resolveAppDataEnvironment(): AppDataEnvironment {
+export function resolveAppDataEnvironment(isDemoData: boolean): AppDataEnvironment {
   if (DATA_SOURCE === 'mock') return 'mock';
-  return 'demonstration';
+  return isDemoData ? 'demonstration' : 'supabase_live';
 }
 
 export function environmentBannerCopy(env: AppDataEnvironment): {
@@ -26,7 +26,7 @@ export function environmentBannerCopy(env: AppDataEnvironment): {
       return {
         title: 'Demonstration workspace',
         detail:
-          'Sample conversations (e.g. Khaya Property Services). Not live WhatsApp traffic until Meta credentials are connected.',
+          'You are viewing Khaya Property Services, a sample business. Calls and minutes here are demo data.',
         tone: 'sky',
       };
     default:

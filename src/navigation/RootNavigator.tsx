@@ -31,12 +31,13 @@ function MainTabs() {
   );
 }
 
-export function RootNavigator() {
+export function RootNavigator({
+  initialRouteName = 'Main',
+}: {
+  initialRouteName?: 'Main' | 'WhatsAppConnect';
+}) {
   return (
-    <Stack.Navigator
-      screenOptions={{ headerShown: false }}
-      initialRouteName="Main"
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen

@@ -455,11 +455,15 @@ export async function setActionItemDone(
   done: boolean
 ): Promise<{ error: string | null }> {
   if (DATA_SOURCE === 'mock') return { error: null };
-  const { error } = await getActiveSupabaseClient()
+  const { data, error } = await getActiveSupabaseClient()
     .from('action_items')
     .update({ status: done ? 'done' : 'open' })
-    .eq('id', actionItemId);
-  return { error: error ? error.message : null };
+    .eq('id', actionItemId)
+    .select('id');
+  if (error) return { error: error.message };
+  // RLS filters rows silently: zero rows means read-only access (the demo).
+  if (!data?.length) return { error: 'The demo business is read-only.' };
+  return { error: null };
 }
 
 // ---------------------------------------------------------------------------

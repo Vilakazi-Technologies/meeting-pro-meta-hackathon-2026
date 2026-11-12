@@ -14,6 +14,7 @@ import { TYPO } from '../constants/typography';
 import { RootStackParamList } from '../types';
 import { useBusinessProfile, formatPhoneNumber } from '../data/businessProfile';
 import { useRegisterWhatsAppNumber } from '../data/whatsappRegistration';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { DATA_SOURCE } from '../lib/supabaseConfig';
 import { getMetaHackathonDefaults } from '../lib/metaHackathonEnv';
 
@@ -25,7 +26,11 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
   const { effectiveTheme } = useTheme();
   const palette = COLORS[effectiveTheme];
   const profile = useBusinessProfile();
+  const workspace = useWorkspace();
   const { register, submitting } = useRegisterWhatsAppNumber();
+  const viewingDemo = workspace.mode === 'demo';
+  const connected = profile.connected && !viewingDemo;
+  const statusError = viewingDemo ? null : profile.error;
 
   const [displayPhone, setDisplayPhone] = useState(metaDefaults.displayPhone);
   const [phoneNumberId, setPhoneNumberId] = useState(metaDefaults.phoneNumberId);
@@ -47,13 +52,14 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
       displayPhone,
       phoneNumberId,
       wabaId,
-      businessName: businessName || profile.businessName || undefined,
+      businessName: businessName || (viewingDemo ? undefined : profile.businessName) || undefined,
     });
     if (!result.ok) {
       setFormError(result.message);
       return;
     }
     profile.reload();
+    workspace.reload();
     setFormSuccess('Number linked. Calls on this line will route to your workspace.');
     if (DATA_SOURCE === 'mock') {
       setTimeout(() => navigation.goBack(), 800);
@@ -63,7 +69,13 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
   return (
     <StackScreenLayout
       fullBleedHeader={
-        <Pressable onPress={() => navigation.goBack()} style={styles.back} accessibilityRole="button">
+        <Pressable
+          onPress={() =>
+            navigation.canGoBack() ? navigation.goBack() : workspace.setSettingUp(false)
+          }
+          style={styles.back}
+          accessibilityRole="button"
+        >
           <Ionicons name="arrow-back" size={24} color={palette.text} />
         </Pressable>
       }
@@ -84,7 +96,7 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
             name={
               profile.loading
                 ? 'ellipsis-horizontal-circle'
-                : profile.connected
+                : connected
                   ? 'checkmark-circle'
                   : 'alert-circle'
             }
@@ -92,7 +104,7 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
             color={
               profile.loading
                 ? palette.textMuted
-                : profile.connected
+                : connected
                   ? palette.success
                   : palette.textMuted
             }
@@ -101,22 +113,22 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
             <Text style={[styles.statusTitle, { color: palette.text }]}>
               {profile.loading
                 ? 'Checking…'
-                : profile.error
+                : statusError
                   ? 'Status unavailable'
-                  : profile.connected
+                  : connected
                     ? 'Connected'
                     : 'Not connected'}
             </Text>
             <Text style={[styles.statusSub, { color: palette.textMuted }]}>
               {profile.loading
                 ? ''
-                : profile.error
-                  ? profile.error
-                  : profile.connected
+                : statusError
+                  ? statusError
+                  : connected
                     ? `${profile.businessName ?? 'Workspace'} · ${formatPhoneNumber(
                         profile.number!.displayPhoneNumber
                       )}`
-                    : 'Add your Cloud API number below to start the demo.'}
+                    : 'Add your WhatsApp Cloud API number below.'}
             </Text>
           </View>
         </View>
@@ -132,7 +144,7 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
           label="Business name (optional)"
           value={businessName}
           onChangeText={setBusinessName}
-          placeholder={profile.businessName ?? 'VILATECH workspace'}
+          placeholder={(!viewingDemo && profile.businessName) || 'Your business name'}
           editable={!submitting}
         />
         <GlassInput
@@ -169,7 +181,7 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
         ) : null}
 
         <GlassPrimaryButton
-          label={profile.connected ? 'Update linked number' : 'Connect number'}
+          label={connected ? 'Update linked number' : 'Connect number'}
           onPress={() => void onSubmit()}
           loading={submitting}
           disabled={
@@ -194,8 +206,8 @@ export function WhatsAppConnectScreen({ navigation }: Props) {
 
       {DATA_SOURCE === 'supabase' ? (
         <Text style={[styles.buttonNote, { color: palette.textMuted }]}>
-          Run migration `20261027120000_register_whatsapp_number.sql` on your Supabase project once.
-          Meta webhook + `META_ACCESS_TOKEN` must still be set for live transcripts.
+          The number must be on the WhatsApp Cloud API with calling enabled. The WhatsApp Business
+          app on a phone is not supported yet.
         </Text>
       ) : null}
     </StackScreenLayout>

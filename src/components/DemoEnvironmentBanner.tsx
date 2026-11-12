@@ -7,6 +7,7 @@ import {
   environmentBannerCopy,
   resolveAppDataEnvironment,
 } from '../lib/demoEnvironment';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 type Props = {
   compact?: boolean;
@@ -19,7 +20,8 @@ type Props = {
 export function DemoEnvironmentBanner({ compact, onLearnMore }: Props) {
   const { effectiveTheme } = useTheme();
   const palette = COLORS[effectiveTheme];
-  const env = resolveAppDataEnvironment();
+  const workspace = useWorkspace();
+  const env = resolveAppDataEnvironment(workspace.isDemoData);
   const copy = environmentBannerCopy(env);
 
   if (env === 'supabase_live') return null;
@@ -53,7 +55,15 @@ export function DemoEnvironmentBanner({ compact, onLearnMore }: Props) {
           </Text>
         ) : null}
       </View>
-      {onLearnMore ? (
+      {workspace.mode === 'demo' ? (
+        <Pressable
+          onPress={() => void workspace.leaveDemo()}
+          hitSlop={8}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.link, { color: accent }]}>Leave demo</Text>
+        </Pressable>
+      ) : onLearnMore ? (
         <Pressable onPress={onLearnMore} hitSlop={8} accessibilityRole="button">
           <Text style={[styles.link, { color: accent }]}>How it works</Text>
         </Pressable>

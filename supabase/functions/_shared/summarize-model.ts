@@ -8,7 +8,10 @@ import type { ModelRequest, ModelResponse } from "../whatsapp-webhook/src/summar
 const META_BASE_URL = "https://api.meta.ai";
 const DEFAULT_MUSE_MODEL = "muse-spark-1.3";
 const DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5";
-const MAX_TOKENS = 4096;
+// Muse Spark reasons before answering and those tokens count against the cap:
+// a short call used ~3.7k, so 4096 truncated longer ones. Kept under ~21k, the
+// SDK's limit for non-streaming requests.
+const MAX_TOKENS = 16000;
 
 export type SummaryModelBackend = "meta" | "anthropic" | "none";
 
