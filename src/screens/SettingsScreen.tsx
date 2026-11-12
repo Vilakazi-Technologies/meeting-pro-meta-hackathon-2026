@@ -25,6 +25,8 @@ import { getDeviceLabel, supportsLiquidGlass } from '../utils/platform';
 import { useMeetingMinutesPrefs } from '../data/meetingMinutesPrefs';
 import { GlassInput } from '../components/GlassInput';
 import { ThemeModePicker } from '../components/ThemeModePicker';
+import { PlanCard } from '../components/PlanCard';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 type SettingsNav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Settings'>,
@@ -37,6 +39,7 @@ export function SettingsScreen({ navigation }: Props) {
   const { effectiveTheme } = useTheme();
   const { email, signOut } = useAuth();
   const profile = useBusinessProfile();
+  const workspace = useWorkspace();
   const minutes = useMeetingMinutesPrefs();
   const [emailDraft, setEmailDraft] = useState('');
   const palette = COLORS[effectiveTheme];
@@ -124,6 +127,13 @@ export function SettingsScreen({ navigation }: Props) {
               </>
             )}
           </GlassCard>
+
+          {workspace.mode === 'member' ? (
+            <>
+              <Text style={[styles.section, { color: palette.textMuted }]}>Plan</Text>
+              <PlanCard email={email} />
+            </>
+          ) : null}
 
           <Text style={[styles.section, { color: palette.textMuted }]}>Meeting minutes email</Text>
           <GlassCard style={styles.menuCard}>

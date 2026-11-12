@@ -30,7 +30,14 @@ type Phase =
   | { kind: 'idle' }
   | { kind: 'ringing'; call: RingingCall }
   | { kind: 'connecting'; call: RingingCall }
-  | { kind: 'connected'; call: RingingCall; since: number; muted: boolean }
+  | {
+      kind: 'connected';
+      call: RingingCall;
+      since: number;
+      muted: boolean;
+      transcribed: boolean;
+      reason: string | null;
+    }
   | { kind: 'ended'; message: string };
 
 const CALL_COLUMNS = 'id, sdp_offer, counterparty_name, counterparty_phone, created_at, ring_state';
@@ -51,24 +58,30 @@ function callerLabel(call: RingingCall): string {
   return 'WhatsApp caller';
 }
 
+interface ControlResult {
+  error: string | null;
+  transcribed?: boolean;
+  reason?: string | null;
+}
+
 async function controlCall(
   supabase: SupabaseClient,
   callId: string,
   action: 'accept' | 'reject' | 'terminate',
   sdp?: string
-): Promise<string | null> {
-  const { error } = await supabase.functions.invoke('call-control', {
+): Promise<ControlResult> {
+  const { data, error } = await supabase.functions.invoke('call-control', {
     body: { call_id: callId, action, sdp },
   });
-  if (!error) return null;
+  if (!error) return { error: null, transcribed: data?.transcribed, reason: data?.reason ?? null };
   const context = (error as { context?: Response }).context;
   try {
     const body = await context?.json();
-    if (body?.error) return String(body.error);
+    if (body?.error) return { error: String(body.error) };
   } catch {
     /* fall through */
   }
-  return error.message;
+  return { error: error.message };
 }
 
 function formatDuration(ms: number): string {
@@ -200,10 +213,10 @@ export function Softphone() {
       setPhase({ kind: 'ringing', call });
       return;
     }
-    const failure = await controlCall(supabase, call.id, 'accept', leg.answerSdp);
-    if (failure) {
+    const accepted = await controlCall(supabase, call.id, 'accept', leg.answerSdp);
+    if (accepted.error) {
       leg.close();
-      finish(failure);
+      finish(accepted.error);
       return;
     }
     legRef.current = leg;
@@ -213,7 +226,14 @@ export function Softphone() {
         finish('The call connection dropped.');
       }
     });
-    setPhase({ kind: 'connected', call, since: Date.now(), muted: false });
+    setPhase({
+      kind: 'connected',
+      call,
+      since: Date.now(),
+      muted: false,
+      transcribed: accepted.transcribed !== false,
+      reason: accepted.reason ?? null,
+    });
   };
 
   const decline = async () => {
@@ -226,7 +246,7 @@ export function Softphone() {
   const hangUp = async () => {
     if (phase.kind !== 'connected') return;
     const id = phase.call.id;
-    finish('Call ended. Minutes will follow shortly.');
+    finish(phase.transcribed ? 'Call ended. Minutes will follow shortly.' : 'Call ended.');
     await controlCall(supabase, id, 'terminate');
   };
 
@@ -275,8 +295,12 @@ export function Softphone() {
         <Text style={[styles.subtitle, { color: palette.textSecondary }]}>{subtitle}</Text>
 
         {phase.kind === 'connected' ? (
-          <Text style={[styles.note, { color: palette.textMuted }]}>
-            Transcription is on. WhatsApp told both of you before it started.
+          <Text
+            style={[styles.note, { color: phase.transcribed ? palette.textMuted : '#F59E0B' }]}
+          >
+            {phase.transcribed
+              ? 'Transcription is on. WhatsApp told both of you before it started.'
+              : `Not transcribed. ${phase.reason ?? ''}`.trim()}
           </Text>
         ) : null}
         {error ? <Text style={[styles.note, { color: palette.error }]}>{error}</Text> : null}

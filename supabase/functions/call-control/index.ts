@@ -56,10 +56,32 @@ interface Target {
   ring_state: string | null;
 }
 
+/**
+ * Over the free allowance or the monthly cap, the call is still answered — it
+ * is the business's customer — but Meta is not asked to transcribe it.
+ */
+async function canTranscribe(businessId: string): Promise<{ allowed: boolean; reason: string | null }> {
+  const { data, error } = await admin.rpc("business_plan", { p_business_id: businessId })
+    .maybeSingle<{ plan: string; can_transcribe: boolean }>();
+  if (error || !data) {
+    // Fail open: a billing lookup problem must not cost a paying user their minutes.
+    console.error(JSON.stringify({ evt: "call_control.plan_lookup_failed", error: error?.message }));
+    return { allowed: true, reason: null };
+  }
+  if (data.can_transcribe) return { allowed: true, reason: null };
+  return {
+    allowed: false,
+    reason: data.plan === "paid"
+      ? "This month's 30 calls or 300 minutes are used up."
+      : "Your 5 free calls are used. Subscribe for R50/month to keep getting minutes.",
+  };
+}
+
 async function sendToMeta(
   target: Target,
   action: Action,
   sdp: string | null,
+  transcribe = true,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const token = await resolveAccessToken(target.business_id, null);
   const body: Record<string, unknown> = {
@@ -68,7 +90,7 @@ async function sendToMeta(
     action,
   };
   if (sdp) body.session = { sdp_type: "answer", sdp };
-  if (action === "accept") {
+  if (action === "accept" && transcribe) {
     body.transcription = {
       status: "ENABLED",
       purpose: TRANSCRIPTION_PURPOSE,
@@ -132,9 +154,13 @@ Deno.serve(async (req: Request) => {
   }
   if (!data?.phone_number_id) return json({ error: "This call has no linked WhatsApp number" }, 404);
 
+  const gate = action === "accept"
+    ? await canTranscribe(data.business_id)
+    : { allowed: false, reason: null };
+
   let result: Awaited<ReturnType<typeof sendToMeta>>;
   try {
-    result = await sendToMeta(data, action, sdp);
+    result = await sendToMeta(data, action, sdp, gate.allowed);
   } catch (err) {
     result = { ok: false, message: err instanceof Error ? err.message : String(err) };
   }
@@ -153,11 +179,15 @@ Deno.serve(async (req: Request) => {
   const now = new Date().toISOString();
   if (action === "accept") {
     await admin.from("calls")
-      .update({ ring_state: "connected", answered_at: now, transcription_enabled: true })
+      .update({ ring_state: "connected", answered_at: now, transcription_enabled: gate.allowed })
       .eq("id", callId);
   } else if (action === "reject" || action === "terminate") {
     await admin.from("calls").update({ ring_state: "ended" }).eq("id", callId);
   }
 
-  return json({ ok: true, action });
+  return json({
+    ok: true,
+    action,
+    ...(action === "accept" ? { transcribed: gate.allowed, reason: gate.reason } : {}),
+  });
 });
